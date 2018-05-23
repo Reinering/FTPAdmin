@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['FTPAdmin.py'],
-             pathex=['F:\\git\\ftpAdmin'],
+             pathex=['F:\\git\\FTPAdmin'],
              binaries=[],
              datas=[],
              hiddenimports=[],

@@ -29,7 +29,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self._translate = QtCore.QCoreApplication.translate
         self.tl = TelnetDev()
-        # self.userConfList = []
         self.userList = []
     # 提权
     def sudo(self, msg, title, information):
@@ -51,15 +50,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def getUser(self):
         self.tl.exec_cmd("cat /etc/vsftpd/vuser_list" + "\r\n")
         msg = self.tl.read_very_eager()
-        print("用户列表：", msg)
         tmpList = msg.split('\r\n')
-        tmpList = tmpList[1:]
-        self.userConfList = tmpList[:-1]
-        print(self.userConfList)
+        print("用户列表：", tmpList)
+        userConfList = []
+        if tmpList[0] == "cat /etc/vsftpd/vuser_list":
+            tmpList = tmpList[1:]
+        if "-bash-4.2$" in tmpList[-1]:
+            userConfList = tmpList[:-1]
+
+        print(userConfList)
         n = 0
         self.userList = []
-        while n < len(self.userConfList):
-            self.userList.append(self.userConfList[n])
+        while n < len(userConfList):
+            self.userList.append(userConfList[n])
             n += 2
         print(self.userList)
         return self.userList
@@ -377,7 +380,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         username = self.lineEdit_username.text()
         passwd = self.lineEdit_passwd.text()
         localPath = self.lineEdit_filePath.text()
-        remotePath = self.comboBox_userList.currentText()
+        directory = self.comboBox_userList.currentText()
         if ip == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"IP地址不能为空")
             return
@@ -387,7 +390,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if passwd == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"登陆密码不能为空")
             return
-        if remotePath == "":
+        if directory == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"请在右侧选择需要上传文件的用户")
             return
         if localPath == "":
@@ -398,7 +401,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fileName = localPath.split("/")[-1]
 
         print("开始上传")
-        self.upload = FTPThread(ip, username, passwd, self.fileName,remotePath, localPath)
+        self.upload = FTPThread(ip, username, passwd, self.fileName, directory, localPath)
         self.upload.start()
         self.upload.sign_to_State.connect(self.uploadFinsh)
 
@@ -459,39 +462,62 @@ class TelnetDev(object):
     def close(self, cmd):
         self.tl.write(cmd.encode("ascii"))
 
+
 class FTPThread(QtCore.QThread):
     sign_to_State = QtCore.pyqtSignal(bool)
 
-    def __init__(self, ip, username, passwd, fileName, remotePath, localPath, parent=None):
+    def __init__(self, ip, username, passwd, fileName, directory, localPath, parent=None):
         super(FTPThread, self).__init__(parent)
         self.ThreadStop = False
         self.ip = ip
         self.username = username
         self.passwd = passwd
         self.fileName = fileName
-        self.remotePath = remotePath
         self.localPath = localPath
+        self.directory = directory
 
     def run(self):
-        self.remotePath = "product/" + self.remotePath + "/" + self.fileName
-        self.remotePath = self.remotePath.encode("utf-8").decode("latin1")
-        print(self.fileName)
+        # remotePath = "product/" + self.directory + "/" + self.fileName
+        # remotePath = remotePath.encode("utf-8").decode("latin1")
+        self.fileName = self.fileName.encode("utf-8").decode("latin1")
+        print("filename", self.fileName)
         ftp = FTP()
         ftp.set_debuglevel(2)
         ftp.connect(self.ip, 21)
         ftp.login(self.username, self.passwd)
+        print(ftp.getwelcome())
+
+
         try:
-            print(ftp.getwelcome())
+            # 清空目录
+            ftp.cwd("product/" + self.directory)
+            fileList = ftp.nlst()
+            if fileList:
+                print("dir", dir)
+                for file in fileList:
+                    ftp.delete(file)
+                fileList = ftp.nlst()
+                if not fileList:
+                    print("成功清空目录")
+            else:
+                print("目录为空")
+
+            # 开始上传文件
             bufsize = 1024
             f = open(self.localPath, 'rb')
-            ftp.storbinary("STOR " + self.remotePath, f, bufsize)
+            ftp.storbinary("STOR " + self.fileName, f, bufsize)
             ftp.set_debuglevel(0)
         except SystemError as e:
+            print(e)
+            self.sign_to_State.emit(False)
+        except Exception as e:
             print(e)
             self.sign_to_State.emit(False)
         finally:
             ftp.close()
         self.sign_to_State.emit(True)
+
+
     def stop(self):
         pass
 
@@ -500,7 +526,6 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     splash = QtWidgets.QSplashScreen(QPixmap("pic/logo.jpg"))
     splash.show()
-    time.sleep(1)
     ui = MainWindow()
     ui.show()
     splash.finish(ui)
