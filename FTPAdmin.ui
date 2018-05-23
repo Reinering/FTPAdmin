@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>745</width>
-    <height>285</height>
+    <height>273</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -19,7 +19,7 @@
   <property name="maximumSize">
    <size>
     <width>745</width>
-    <height>285</height>
+    <height>273</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -67,7 +67,7 @@
              </font>
             </property>
             <property name="text">
-             <string>10.110.30.86</string>
+             <string>192.168.186.186</string>
             </property>
             <property name="readOnly">
              <bool>false</bool>
@@ -96,7 +96,7 @@
              </size>
             </property>
             <property name="text">
-             <string/>
+             <string>ftpadmin</string>
             </property>
             <property name="echoMode">
              <enum>QLineEdit::Password</enum>
@@ -125,7 +125,7 @@
              </size>
             </property>
             <property name="text">
-             <string/>
+             <string>ftpadmin00000000</string>
             </property>
             <property name="echoMode">
              <enum>QLineEdit::Password</enum>
@@ -694,13 +694,13 @@
          <widget class="QLabel" name="label_15">
           <property name="minimumSize">
            <size>
-            <width>150</width>
+            <width>155</width>
             <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>150</width>
+            <width>155</width>
             <height>16777215</height>
            </size>
           </property>
@@ -711,7 +711,7 @@
            </font>
           </property>
           <property name="text">
-           <string>上传文件的下载地址</string>
+           <string>上传文件的下载地址：</string>
           </property>
          </widget>
         </item>
@@ -719,7 +719,7 @@
          <widget class="QLabel" name="label_downloadPath">
           <property name="minimumSize">
            <size>
-            <width>150</width>
+            <width>0</width>
             <height>0</height>
            </size>
           </property>

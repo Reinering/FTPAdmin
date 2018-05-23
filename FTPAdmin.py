@@ -12,7 +12,7 @@ from PyQt5.QtGui import QPixmap
 import telnetlib
 import time
 import subprocess
-# import pexpect
+from ftplib import FTP
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """
@@ -98,7 +98,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         dirname = model + "_" + customer
         if not self.userList:
-            self.on_pushButton_refresh_clicked()
+            userList = self.getUser()
+            self.setComboBox_userList(userList)
         if dirname in self.userList:
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"此用户已存在，若忘记密码请更新密码。")
             return
@@ -189,7 +190,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tl.close("exit" + "\r\n")
         information = QtWidgets.QMessageBox.information(self, u"提示", u"刷新完成")
 
-
+    # 密码更新
     @pyqtSlot()
     def on_pushButton_update_clicked(self):
         """
@@ -282,19 +283,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # 登陆
     def login(self):
-        if self.lineEdit_ipAddr.text() == "":
+        ip = self.lineEdit_ipAddr.text()
+        username = self.lineEdit_username.text()
+        passwd = self.lineEdit_passwd.text()
+        if ip == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"IP地址不能为空")
             return
-        elif self.lineEdit_username.text() == "":
+        if username == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"用户名不能为空")
             return
-        elif self.lineEdit_passwd.text() == "":
+        if passwd == "":
             warning = QtWidgets.QMessageBox.warning(self, u"提示", u"登陆密码不能为空")
             return
 
         login_Method = "Telnet"
-        telnet_prompt = ["MiWiFi-R1CM-srv login:", "Password:"]
-        telnet_prompt = ["localhost login:", "Password:"]
+        telnet_prompt = []
+        if ip == "192.168.186.186":
+            telnet_prompt = ["MiWiFi-R1CM-srv login:", "Password:"]
+        elif ip == "10.110.30.86":
+            telnet_prompt = ["localhost login:", "Password:"]
         if not self.getLinkState(self.lineEdit_ipAddr.text()):
             # warning = QtWidgets.QMessageBox.warning(self, u"网络连接检查", u"请检查配置网络是否连接正常，确认无误后请重新操作")
             # information = QtWidgets.QMessageBox.information(self, u"提示", u"操作完成")
@@ -305,7 +312,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if login_Method == "Telnet":
             try:
-                self.tl.auth(self.lineEdit_ipAddr.text(), 23, self.lineEdit_username.text() + "\r\n", self.lineEdit_passwd.text() + "\r\n",
+                self.tl.auth(ip, 23, username + "\r\n", passwd + "\r\n",
                                      telnet_prompt)
                 time.sleep(1)
                 msg = self.tl.read_very_eager()
@@ -366,8 +373,48 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         Slot documentation goes here.
         """
-        # TODO: not implemented yet
-        raise NotImplementedError
+        ip = self.lineEdit_ipAddr.text()
+        username = self.lineEdit_username.text()
+        passwd = self.lineEdit_passwd.text()
+        localPath = self.lineEdit_filePath.text()
+        remotePath = self.comboBox_userList.currentText()
+        if ip == "":
+            warning = QtWidgets.QMessageBox.warning(self, u"提示", u"IP地址不能为空")
+            return
+        if username == "":
+            warning = QtWidgets.QMessageBox.warning(self, u"提示", u"用户名不能为空")
+            return
+        if passwd == "":
+            warning = QtWidgets.QMessageBox.warning(self, u"提示", u"登陆密码不能为空")
+            return
+        if remotePath == "":
+            warning = QtWidgets.QMessageBox.warning(self, u"提示", u"请在右侧选择需要上传文件的用户")
+            return
+        if localPath == "":
+            warning = QtWidgets.QMessageBox.warning(self, u"提示", u"请选择需要上传的文件")
+            return
+
+        self.modifyWidgetState(False)
+        self.fileName = localPath.split("/")[-1]
+
+        print("开始上传")
+        self.upload = FTPThread(ip, username, passwd, self.fileName,remotePath, localPath)
+        self.upload.start()
+        self.upload.sign_to_State.connect(self.uploadFinsh)
+
+    def modifyWidgetState(self, check):
+        self.lineEdit_filePath.setEnabled(check)
+        self.pushButton_openPath.setEnabled(check)
+        self.pushButton_up.setEnabled(check)
+
+    def uploadFinsh(self, check):
+        self.modifyWidgetState(True)
+        if check:
+            information = QtWidgets.QMessageBox.information(self, u"提示", u"上传完成")
+            path = "ftp://10.110.30.86/" + self.fileName
+            self.label_downloadPath.setText(self._translate("MainWindow", path))
+        else:
+            warning = QtWidgets.QMessageBox.warning(self, u"警告", u"上传失败，请重试")
 
 class TelnetDev(object):
 
@@ -411,6 +458,42 @@ class TelnetDev(object):
         return msg
     def close(self, cmd):
         self.tl.write(cmd.encode("ascii"))
+
+class FTPThread(QtCore.QThread):
+    sign_to_State = QtCore.pyqtSignal(bool)
+
+    def __init__(self, ip, username, passwd, fileName, remotePath, localPath, parent=None):
+        super(FTPThread, self).__init__(parent)
+        self.ThreadStop = False
+        self.ip = ip
+        self.username = username
+        self.passwd = passwd
+        self.fileName = fileName
+        self.remotePath = remotePath
+        self.localPath = localPath
+
+    def run(self):
+        self.remotePath = "product/" + self.remotePath + "/" + self.fileName
+        self.remotePath = self.remotePath.encode("utf-8").decode("latin1")
+        print(self.fileName)
+        ftp = FTP()
+        ftp.set_debuglevel(2)
+        ftp.connect(self.ip, 21)
+        ftp.login(self.username, self.passwd)
+        try:
+            print(ftp.getwelcome())
+            bufsize = 1024
+            f = open(self.localPath, 'rb')
+            ftp.storbinary("STOR " + self.remotePath, f, bufsize)
+            ftp.set_debuglevel(0)
+        except SystemError as e:
+            print(e)
+            self.sign_to_State.emit(False)
+        finally:
+            ftp.close()
+        self.sign_to_State.emit(True)
+    def stop(self):
+        pass
 
 if __name__ == "__main__":
     import sys

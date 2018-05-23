@@ -15,3 +15,8 @@ while n < len(tmpList):
     userList.append(tmpList[n])
     n += 2
 print(userList)
+
+
+msg = "cat /etc/vsftpd/vuser_list"
+
+msg
