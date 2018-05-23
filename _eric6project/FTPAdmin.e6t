@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Tasks SYSTEM "Tasks-6.0.dtd">
+<!-- eric6 tasks file for project FTPAdmin -->
+<!-- Saved: 2018-05-23, 18:55:40 -->
+<Tasks version="6.0">
+  <ProjectScanFilter></ProjectScanFilter>
+  <Task priority="1" completed="False" type="1" uid="{54b5f447-3fa0-40f2-ad2e-df31d2c817da}">
+    <Summary>TODO: not implemented yet</Summary>
+    <Description></Description>
+    <Created>2018-05-23, 18:38:55</Created>
+    <Resource>
+      <Filename>FTPAdmin.py</Filename>
+      <Linenumber>369</Linenumber>
+    </Resource>
+  </Task>
+</Tasks>
